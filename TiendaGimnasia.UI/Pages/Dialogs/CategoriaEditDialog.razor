@@ -1,0 +1,63 @@
+﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using TiendaGimnasia.UI.Models
+
+<MudDialog Title="@Title">
+    <DialogContent>
+        <MudForm @ref="_form" class="mt-2">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Value="_edit.id_categoria.ToString()" Label="Id" Disabled="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_edit.nombre" Label="Nombre" Required="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_edit.descripcion" Label="Descripción" Lines="3" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Guardar">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Editar categoría";
+    [Parameter] public CategoriaDTO Model { get; set; } = new();
+
+    // El PADRE nos pasa estas acciones
+    [Parameter] public EventCallback<CategoriaDTO> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private CategoriaDTO _edit = new();
+    private MudForm? _form;
+
+    protected override void OnParametersSet()
+    {
+        _edit = new CategoriaDTO
+        {
+            id_categoria = Model.id_categoria,
+            nombre = Model.nombre,
+            descripcion = Model.descripcion
+        };
+    }
+
+    private async Task Guardar()
+    {
+        if (_form is not null)
+        {
+            await _form.Validate();
+            if (!_form.IsValid) return;
+        }
+        await OnSave.InvokeAsync(_edit);     // <- avisa al padre
+    }
+
+    private async Task Cancelar()
+        => await OnCancel.InvokeAsync();   // <- avisa al padre
+}

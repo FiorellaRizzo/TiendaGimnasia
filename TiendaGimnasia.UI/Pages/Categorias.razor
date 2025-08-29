@@ -1,0 +1,189 @@
+﻿@page "/categorias"
+@using MudBlazor
+@using TiendaGimnasia.UI.Models
+@using TiendaGimnasia.UI.Pages.Dialogs
+@inject CategoriasAPI Api
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Categorías</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+  <MudPaper Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+      <MudText Typo="Typo.h5">Categorías</MudText>
+      <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CrearAsync">
+        Nueva categoría
+      </MudButton>
+    </MudStack>
+  </MudPaper>
+
+  <MudPaper Class="pa-4">
+    @if (_cargando)
+    {
+      <div class="d-flex justify-center pa-6">
+        <MudProgressCircular Indeterminate="true" />
+        <MudText Class="ml-3">Cargando...</MudText>
+      </div>
+    }
+    else
+    {
+      <MudTable Items="_items" Hover="true" Dense="true" Bordered="true">
+        <HeaderContent>
+          <MudTh style="width:80px;">ID</MudTh>
+          <MudTh>Nombre</MudTh>
+          <MudTh>Descripción</MudTh>
+          <MudTh style="width:210px;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+          <MudTd DataLabel="ID">@context.id_categoria</MudTd>
+          <MudTd DataLabel="Nombre">@context.nombre</MudTd>
+          <MudTd DataLabel="Descripción">@context.descripcion</MudTd>
+          <MudTd>
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(()=>EditarAsync(context))">
+              Editar
+            </MudButton>
+            <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="ml-2"
+                       OnClick="@(()=>EliminarAsync(context))">
+              Borrar
+            </MudButton>
+          </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+          <MudText>No hay categorías cargadas.</MudText>
+        </NoRecordsContent>
+      </MudTable>
+    }
+  </MudPaper>
+</MudContainer>
+
+@code {
+   
+    // Estado de la página
+    private List<CategoriaDTO> _items = new();
+    private bool _cargando;
+
+    // Carga inicial
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
+    {
+        try
+        {
+            _cargando = true;
+            _items = await Api.GetAllAsync();
+        }
+        catch
+        {
+            Snackbar.Add("No se pudieron obtener las categorías", Severity.Error);
+        }
+        finally
+        {
+            _cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    //  Crear
+    private async Task CrearAsync()
+    {
+        MudBlazor.IDialogReference dialogRef = default!;
+
+        dialogRef = await Dialog.ShowAsync<CategoriaEditDialog>(
+            "Nueva categoría",
+            new DialogParameters
+            {
+            { nameof(CategoriaEditDialog.Model), new CategoriaDTO() },
+            { nameof(CategoriaEditDialog.OnSave),
+              EventCallback.Factory.Create<CategoriaDTO>(this, async dto =>
+              {
+                  dialogRef.Close(DialogResult.Ok(dto));
+                  var created = await Api.CreateAsync(dto);
+                  if (created is not null)
+                  {
+                      Snackbar.Add("Categoría creada", Severity.Success);
+                      await CargarAsync();
+                  }
+                  else Snackbar.Add("No se pudo crear la categoría", Severity.Error);
+              })
+            },
+            { nameof(CategoriaEditDialog.OnCancel),
+              EventCallback.Factory.Create(this, () =>
+              {
+                  dialogRef.Close(DialogResult.Cancel());
+              })
+            }
+            },
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
+
+        await dialogRef.Result;
+    }
+
+    private async Task EditarAsync(CategoriaDTO item)
+    {
+        var editable = new CategoriaDTO
+        {
+            id_categoria = item.id_categoria,
+            nombre = item.nombre,
+            descripcion = item.descripcion
+        };
+
+        MudBlazor.IDialogReference dialogRef = default!;
+
+        dialogRef = await Dialog.ShowAsync<CategoriaEditDialog>(
+            "Editar categoría",
+            new DialogParameters
+            {
+            { nameof(CategoriaEditDialog.Model), editable },
+            { nameof(CategoriaEditDialog.OnSave),
+              EventCallback.Factory.Create<CategoriaDTO>(this, async dto =>
+              {
+                  dialogRef.Close(DialogResult.Ok(dto));
+                  var ok = await Api.UpdateAsync(dto.id_categoria, dto);
+                  if (ok)
+                  {
+                      Snackbar.Add("Categoría actualizada", Severity.Success);
+                      await CargarAsync();
+                  }
+                  else Snackbar.Add("No se pudo actualizar la categoría", Severity.Error);
+              })
+            },
+            { nameof(CategoriaEditDialog.OnCancel),
+              EventCallback.Factory.Create(this, () =>
+              {
+                  dialogRef.Close(DialogResult.Cancel());
+              })
+            }
+            },
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true });
+
+        await dialogRef.Result;
+    }
+
+
+    // Eliminar
+    private async Task EliminarAsync(CategoriaDTO item)
+    {
+        bool? confirm = await Dialog.ShowMessageBox(
+            "Confirmar borrado",
+            (MarkupString)$"¿Eliminar la categoría <b>{item.nombre}</b>?",
+            yesText: "Sí, borrar",
+            cancelText: "Cancelar",
+            options: new DialogOptions { CloseButton = true });
+
+        if (confirm == true)
+        {
+            var ok = await Api.DeleteAsync(item.id_categoria);
+            if (ok)
+            {
+                Snackbar.Add("Categoría eliminada", Severity.Success);
+                await CargarAsync();
+            }
+            else
+            {
+                Snackbar.Add("No se pudo eliminar la categoría", Severity.Error);
+            }
+        }
+    }
+}
+
