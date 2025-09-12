@@ -1,19 +1,62 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider />
+@using MudBlazor
+
+<MudThemeProvider Theme="_theme" />
+
 <MudDialogProvider />
-<MudSnackbarProvider />
+<MudSnackbarProvider MaxDisplayedSnackbars="3" PreventDuplicates="true" />
 
 <MudLayout>
-    <MudAppBar Color="Color.Primary" Elevation="2">
-        <MudText Typo="Typo.h6">Tienda Gimnasia</MudText>
-        <MudSpacer />
-        <MudButton Variant="Variant.Outlined" Href="/categorias">Categorías</MudButton>
-    </MudAppBar>
 
+      
+    <MudDrawer Open="true"
+               Elevation="0"
+               Variant="DrawerVariant.Mini"
+               Class="drawer-gradient">
+        <MudNavMenu Class="p-3">
+            <MudNavLink Href="/productos" Icon="@Icons.Material.Filled.Inventory2">Productos</MudNavLink>
+            <MudNavLink Href="/stock"     Icon="@Icons.Material.Filled.Warehouse">Control de Stock</MudNavLink>
+            <MudNavLink Href="/usuarios"  Icon="@Icons.Material.Filled.Group">Usuarios</MudNavLink>
+            <MudNavLink Href="/pedidos"   Icon="@Icons.Material.Filled.ReceiptLong">Pedidos</MudNavLink>
+            <MudNavLink Href="/categorias" Icon="@Icons.Material.Filled.Category">Categorías</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+
+
+    
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+        <MudAppBar Elevation="0" Color="Color.Primary" Class="px-6 py-3">
+            <MudText Typo="Typo.h6" Class="text-white">Panel Administrativo</MudText>
+        </MudAppBar>
+
+        <MudContainer MaxWidth="MaxWidth.False" Class="p-6">
             @Body
         </MudContainer>
     </MudMainContent>
+
 </MudLayout>
+
+@code {
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            
+            Primary = "#F9A8D4", 
+            Secondary = "#FBCFE8", 
+            Background = "#FFF7FB", 
+            Surface = "#FFFFFF", 
+
+            // AppBar
+            AppbarBackground = "#F9A8D4", 
+            AppbarText = "#5A005F", //
+
+            // Drawer
+            DrawerBackground = "#F9A8D4",
+            DrawerText = "#5A005F",
+            DrawerIcon = "#5A005F"
+        },
+        LayoutProperties = new LayoutProperties { DefaultBorderRadius = "12px" }
+    };
+}
