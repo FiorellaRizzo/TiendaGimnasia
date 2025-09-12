@@ -11,5 +11,7 @@ namespace TiendaGimnasia.Models
 
         public string nombre { get; set; } = string.Empty;
         public string descripcion { get; set; } = string.Empty;
+
+        public ICollection<Producto> Productos { get; set; } = new List<Producto>();
     }
 }
