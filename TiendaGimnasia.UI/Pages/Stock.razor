@@ -1,0 +1,98 @@
+﻿@page "/stock"
+@using MudBlazor
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+
+    <!-- Resumen -->
+    <MudPaper Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">Total de Productos</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@_inv.Count</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">Productos con Stock Bajo</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Warning">@_inv.Count(x => x.StockActual < 6)</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6">Valor Total Inventario</MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Success">
+                            @(_inv.Sum(x => x.ValorTotal).ToString("C"))
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Tabs -->
+    <MudPaper Class="pa-4">
+        <MudTabs>
+            <MudTabPanel Text="Inventario Actual">
+
+                <MudTable T="InventoryRow" Items="@_inv" Hover="true" Dense="true" Bordered="true">
+                    <HeaderContent>
+                        <MudTh>Producto</MudTh>
+                        <MudTh>Categoría</MudTh>
+                        <MudTh>Stock Actual</MudTh>
+                        <MudTh>Valor Unitario</MudTh>
+                        <MudTh>Valor Total</MudTh>
+                        <MudTh>Acciones</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.Producto</MudTd>
+                        <MudTd>@context.Categoria</MudTd>
+                        <MudTd>
+                            <MudChip T="int" Color="@(context.StockActual < 6 ? Color.Error : Color.Success)">
+                                @context.StockActual
+                            </MudChip>
+                        </MudTd>
+                        <MudTd>@context.ValorUnitario.ToString("C")</MudTd>
+                        <MudTd>@context.ValorTotal.ToString("C")</MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Remove" Color="Color.Error" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+            </MudTabPanel>
+
+            <MudTabPanel Text="Movimientos de Stock">
+                <MudAlert Severity="Severity.Info">
+                    Aquí va el histórico de entradas y salidas (placeholder).
+                </MudAlert>
+            </MudTabPanel>
+        </MudTabs>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    public class InventoryRow
+    {
+        public string Producto { get; set; } = "";
+        public string Categoria { get; set; } = "";
+        public int StockActual { get; set; }
+        public decimal ValorUnitario { get; set; }
+        public decimal ValorTotal => ValorUnitario * StockActual;
+    }
+
+    private List<InventoryRow> _inv = new()
+    {
+        new() { Producto="Mazas Venturelli", Categoria="Mazas", StockActual=15, ValorUnitario=45.99m },
+        new() { Producto="Aro Pastorelli 85cm", Categoria="Aros", StockActual=8, ValorUnitario=32.50m },
+        new() { Producto="Cinta Chacott 6m", Categoria="Cintas", StockActual=12, ValorUnitario=28.75m },
+        new() { Producto="Pelota Sasaki 18cm", Categoria="Pelotas", StockActual=20, ValorUnitario=24.99m },
+        new() { Producto="Maillot Competición", Categoria="Indumentaria", StockActual=5, ValorUnitario=89.99m }
+    };
+}

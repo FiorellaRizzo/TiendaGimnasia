@@ -1,0 +1,56 @@
+﻿@page "/pedidos"
+@using MudBlazor
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <MudPaper Class="pa-4">
+        <MudTable T="PedidoRow" Items="@_pedidos" Hover="true" Dense="true" Bordered="true">
+            <HeaderContent>
+                <MudTh>N° Pedido</MudTh>
+                <MudTh>Cliente</MudTh>
+                <MudTh>Fecha</MudTh>
+                <MudTh>Total</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Numero</MudTd>
+                <MudTd>@context.Cliente</MudTd>
+                <MudTd>@context.Fecha.ToString("dd/MM/yyyy")</MudTd>
+                <MudTd>@context.Total.ToString("C")</MudTd>
+                <MudTd>
+                    <MudChip T="string" Color="@context.ColorEstado">@context.Estado</MudChip>
+                </MudTd>
+                <MudTd>
+                    <MudButton Variant="Variant.Text" Color="Color.Primary">Actualizar</MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    public class PedidoRow
+    {
+        public string Numero { get; set; } = "";
+        public string Cliente { get; set; } = "";
+        public DateTime Fecha { get; set; }
+        public decimal Total { get; set; }
+        public string Estado { get; set; } = "Pendiente";
+        public Color ColorEstado =>
+            Estado switch
+            {
+                "Entregado" => Color.Success,
+                "Enviado" => Color.Info,
+                "Pendiente" => Color.Warning,
+                _ => Color.Default
+            };
+    }
+
+    private List<PedidoRow> _pedidos = new()
+    {
+        new() { Numero="PED-001", Cliente="María López", Fecha=new(2023,5,18), Total=78.49m, Estado="Entregado" },
+        new() { Numero="PED-002", Cliente="Juan Pérez",  Fecha=new(2023,5,25), Total=124.75m, Estado="Enviado"   },
+        new() { Numero="PED-003", Cliente="Carlos Ruiz", Fecha=new(2023,6,2),  Total=89.99m,  Estado="Pendiente" },
+        new() { Numero="PED-004", Cliente="María López", Fecha=new(2023,6,10), Total=53.50m,  Estado="Pendiente" }
+    };
+}

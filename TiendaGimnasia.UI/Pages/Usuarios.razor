@@ -1,0 +1,53 @@
+﻿@page "/usuarios"
+@using MudBlazor
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <MudPaper Class="pa-4 mb-4 d-flex justify-end">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled">
+            + Agregar Usuario
+        </MudButton>
+    </MudPaper>
+
+    <MudPaper Class="pa-4">
+        <MudTable T="UsuarioRow" Items="@_usuarios" Hover="true" Dense="true" Bordered="true">
+            <HeaderContent>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Email</MudTh>
+                <MudTh>Rol</MudTh>
+                <MudTh>Fecha Registro</MudTh>
+                <MudTh>Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Nombre</MudTd>
+                <MudTd>@context.Email</MudTd>
+                <MudTd>
+                    <MudChip T="string" Color="@context.RolColor">@context.Rol</MudChip>
+                </MudTd>
+                <MudTd>@context.FechaRegistro.ToString("dd/MM/yyyy")</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    public class UsuarioRow
+    {
+        public string Nombre { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Rol { get; set; } = "Cliente";
+        public Color RolColor => Rol == "Administrador" ? Color.Secondary : Color.Success;
+        public DateTime FechaRegistro { get; set; }
+    }
+
+    private List<UsuarioRow> _usuarios = new()
+    {
+        new() { Nombre="María López",  Email="maria@example.com", Rol="Cliente",        FechaRegistro=new(2023,3,15) },
+        new() { Nombre="Juan Pérez",   Email="juan@example.com",  Rol="Cliente",        FechaRegistro=new(2023,4,22) },
+        new() { Nombre="Ana Gómez",    Email="ana@example.com",   Rol="Administrador",  FechaRegistro=new(2023,1,10) },
+        new() { Nombre="Carlos Ruiz",  Email="carlos@example.com",Rol="Cliente",        FechaRegistro=new(2023,5,5)  }
+    };
+}
