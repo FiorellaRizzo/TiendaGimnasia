@@ -1,0 +1,118 @@
+﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using TiendaGimnasia.Shared.DTOs
+
+<MudDialog Title="@Title">
+    <DialogContent>
+        <MudForm @ref="_form">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Id" Value="@_edit.id_usuario.ToString()" Disabled="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Email" @bind-Value="_edit.email" Required="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Nombre" @bind-Value="_edit.nombre" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Apellido" @bind-Value="_edit.apellido" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Teléfono" @bind-Value="_edit.telefono" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Dirección" @bind-Value="_edit.direccion" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+
+                    <MudSelect T="string" Label="Tipo de usuario" @bind-Value="_edit.tipo_usuario" Required="true">
+                        <MudSelectItem Value="@("Cliente")">Cliente</MudSelectItem>
+                        <MudSelectItem Value="@("Administrador")">Administrador</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                @* Campo de contraseña (solo visible si querés modificarla en edición/creación) *@
+                <MudItem xs="12" sm="6">
+                    <MudTextField Label="Contraseña (opcional)" @bind-Value="_contrasena" InputType="InputType.Password" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Guardar">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Usuario";
+    [Parameter] public UsuarioDTO Model { get; set; } = new();
+    [Parameter] public EventCallback<UsuarioUpdateDTO> OnSaveUpdate { get; set; } // para Editar
+    [Parameter] public EventCallback<UsuarioCreateDTO> OnSaveCreate { get; set; }  // para Crear
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private MudForm? _form;
+    private UsuarioDTO _edit = new();
+    private string? _contrasena;
+
+    protected override void OnParametersSet()
+    {
+        _edit = new UsuarioDTO
+        {
+            id_usuario = Model.id_usuario,
+            nombre = Model.nombre,
+            apellido = Model.apellido,
+            email = Model.email,
+            telefono = Model.telefono,
+            direccion = Model.direccion,
+            tipo_usuario = Model.tipo_usuario
+        };
+        _contrasena = null;
+    }
+
+    private async Task Guardar()
+    {
+        if (_form is not null)
+        {
+            await _form.Validate();
+            if (!_form.IsValid) return;
+        }
+
+        if (_edit.id_usuario == 0)
+        {
+            var create = new UsuarioCreateDTO
+            {
+                nombre = _edit.nombre,
+                apellido = _edit.apellido,
+                email = _edit.email,
+                contrasena = _contrasena,
+                telefono = _edit.telefono,
+                direccion = _edit.direccion,
+                tipo_usuario = _edit.tipo_usuario
+            };
+            await OnSaveCreate.InvokeAsync(create);
+        }
+        else
+        {
+            var update = new UsuarioUpdateDTO
+            {
+                id_usuario = _edit.id_usuario,
+                nombre = _edit.nombre,
+                apellido = _edit.apellido,
+                email = _edit.email,
+                contrasena = _contrasena, // null = no cambia
+                telefono = _edit.telefono,
+                direccion = _edit.direccion,
+                tipo_usuario = _edit.tipo_usuario
+            };
+            await OnSaveUpdate.InvokeAsync(update);
+        }
+    }
+
+    private async Task Cancelar() => await OnCancel.InvokeAsync();
+}

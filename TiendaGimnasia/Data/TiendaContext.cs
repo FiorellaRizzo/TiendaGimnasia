@@ -13,6 +13,8 @@ namespace TiendaGimnasia.Data
         public DbSet<Categoria> Categorias { get; set; }
         public DbSet<Producto> Productos { get; set; } = null!;
 
+        public DbSet<Usuario> Usuarios { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

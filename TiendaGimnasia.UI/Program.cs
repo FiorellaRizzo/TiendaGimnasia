@@ -31,6 +31,8 @@ builder.Services.AddScoped<CategoriasAPI>();
 builder.Services.AddScoped<ProductosAPI>();
 
 
+builder.Services.AddScoped<UsuariosAPI>();
+
 builder.Services.AddSingleton<WeatherForecastService>();
 
 var app = builder.Build();

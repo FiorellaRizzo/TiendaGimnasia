@@ -1,53 +1,208 @@
 ﻿@page "/usuarios"
 @using MudBlazor
+@using TiendaGimnasia.Shared.DTOs
+@using TiendaGimnasia.UI.Pages.Dialogs
+@inject UsuariosAPI Api
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Usuarios</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
     <MudPaper Class="pa-4 mb-4 d-flex justify-end">
-        <MudButton Color="Color.Primary" Variant="Variant.Filled">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CrearAsync">
             + Agregar Usuario
         </MudButton>
     </MudPaper>
 
     <MudPaper Class="pa-4">
-        <MudTable T="UsuarioRow" Items="@_usuarios" Hover="true" Dense="true" Bordered="true">
-            <HeaderContent>
-                <MudTh>Nombre</MudTh>
-                <MudTh>Email</MudTh>
-                <MudTh>Rol</MudTh>
-                <MudTh>Fecha Registro</MudTh>
-                <MudTh>Acciones</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd>@context.Nombre</MudTd>
-                <MudTd>@context.Email</MudTd>
-                <MudTd>
-                    <MudChip T="string" Color="@context.RolColor">@context.Rol</MudChip>
-                </MudTd>
-                <MudTd>@context.FechaRegistro.ToString("dd/MM/yyyy")</MudTd>
-                <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        @if (_cargando)
+        {
+            <div class="d-flex justify-center pa-6">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Class="ml-3">Cargando...</MudText>
+            </div>
+        }
+        else
+        {
+            <MudTable Items="_items" Hover="true" Dense="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh>Nombre</MudTh>
+                    <MudTh>Apellido</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh>Teléfono</MudTh>
+                    <MudTh>Dirección</MudTh>
+                    <MudTh>Tipo</MudTh>
+                    <MudTh style="width:200px;">Acciones</MudTh>
+                </HeaderContent>
+
+                <RowTemplate>
+                    <MudTd>@context.nombre</MudTd>
+                    <MudTd>@context.apellido</MudTd>
+                    <MudTd>@context.email</MudTd>
+                    <MudTd>@context.telefono</MudTd>
+                    <MudTd>@context.direccion</MudTd>
+                    <MudTd>
+                        <MudChip T="string"
+                                 Value="@context.tipo_usuario"
+                                 Color="@(context.tipo_usuario == "Administrador" ? Color.Secondary : Color.Success)">
+                            @context.tipo_usuario
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => EditarAsync(context))">
+                            Editar
+                        </MudButton>
+                        <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Text" Class="ml-2"
+                                   OnClick="@(() => EliminarAsync(context))">
+                            Borrar
+                        </MudButton>
+                    </MudTd>
+                </RowTemplate>
+
+                <NoRecordsContent>
+                    <MudText>No hay usuarios cargados.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        }
     </MudPaper>
 </MudContainer>
 
 @code {
-    public class UsuarioRow
+    private List<UsuarioDTO> _items = new();
+    private bool _cargando;
+
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+
+    private async Task CargarAsync()
     {
-        public string Nombre { get; set; } = "";
-        public string Email { get; set; } = "";
-        public string Rol { get; set; } = "Cliente";
-        public Color RolColor => Rol == "Administrador" ? Color.Secondary : Color.Success;
-        public DateTime FechaRegistro { get; set; }
+        try
+        {
+            _cargando = true;
+            _items = await Api.GetAllAsync();
+        }
+        catch
+        {
+            Snackbar.Add("No se pudieron obtener los usuarios", Severity.Error);
+        }
+        finally
+        {
+            _cargando = false;
+            StateHasChanged();
+        }
     }
 
-    private List<UsuarioRow> _usuarios = new()
+    private async Task CrearAsync()
     {
-        new() { Nombre="María López",  Email="maria@example.com", Rol="Cliente",        FechaRegistro=new(2023,3,15) },
-        new() { Nombre="Juan Pérez",   Email="juan@example.com",  Rol="Cliente",        FechaRegistro=new(2023,4,22) },
-        new() { Nombre="Ana Gómez",    Email="ana@example.com",   Rol="Administrador",  FechaRegistro=new(2023,1,10) },
-        new() { Nombre="Carlos Ruiz",  Email="carlos@example.com",Rol="Cliente",        FechaRegistro=new(2023,5,5)  }
-    };
+        MudBlazor.IDialogReference dialogRef = default!;
+
+        dialogRef = await Dialog.ShowAsync<UsuaEditDialog>(
+            "Nuevo usuario",
+            new DialogParameters
+            {
+                { nameof(UsuaEditDialog.Model), new UsuarioDTO() },
+                {
+                  nameof(UsuaEditDialog.OnSaveCreate),
+                  EventCallback.Factory.Create<UsuarioCreateDTO>(this, async dto =>
+                  {
+                      var creado = await Api.CreateAsync(dto);
+                      if (creado is not null)
+                      {
+                          Snackbar.Add("Usuario creado", Severity.Success);
+                          dialogRef.Close(DialogResult.Ok(true));   // <-- cierra el modal
+                          await CargarAsync();
+                      }
+                      else
+                      {
+                          Snackbar.Add("No se pudo crear", Severity.Error);
+                      }
+                  })
+                },
+                {
+                  nameof(UsuaEditDialog.OnCancel),
+                  EventCallback.Factory.Create(this, () =>
+                  {
+                      dialogRef.Close(DialogResult.Cancel());       // <-- cierra por cancelación
+                  })
+                }
+            },
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true }
+        );
+
+        await dialogRef.Result; // opcional
+    }
+
+    private async Task EditarAsync(UsuarioDTO item)
+    {
+        var editable = new UsuarioDTO
+        {
+            id_usuario = item.id_usuario,
+            nombre = item.nombre,
+            apellido = item.apellido,
+            email = item.email,
+            telefono = item.telefono,
+            direccion = item.direccion,
+            tipo_usuario = item.tipo_usuario
+        };
+
+        MudBlazor.IDialogReference dialogRef = default!;
+
+        dialogRef = await Dialog.ShowAsync<UsuaEditDialog>(
+            "Editar usuario",
+            new DialogParameters
+            {
+                { nameof(UsuaEditDialog.Model), editable },
+                {
+                  nameof(UsuaEditDialog.OnSaveUpdate),
+                  EventCallback.Factory.Create<UsuarioUpdateDTO>(this, async dto =>
+                  {
+                      var ok = await Api.UpdateAsync(dto.id_usuario, dto);
+                      if (ok)
+                      {
+                          Snackbar.Add("Usuario actualizado", Severity.Success);
+                          dialogRef.Close(DialogResult.Ok(true));   // <-- cierra el modal
+                          await CargarAsync();
+                      }
+                      else
+                      {
+                          Snackbar.Add("No se pudo actualizar", Severity.Error);
+                      }
+                  })
+                },
+                {
+                  nameof(UsuaEditDialog.OnCancel),
+                  EventCallback.Factory.Create(this, () =>
+                  {
+                      dialogRef.Close(DialogResult.Cancel());       // <-- cierra por cancelación
+                  })
+                }
+            },
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Small, CloseOnEscapeKey = true }
+        );
+
+        await dialogRef.Result; // opcional
+    }
+
+    private async Task EliminarAsync(UsuarioDTO item)
+    {
+        bool? confirm = await Dialog.ShowMessageBox(
+            "Confirmar borrado",
+            (MarkupString)$"¿Eliminar al usuario <b>{item.nombre} {item.apellido}</b>?",
+            yesText: "Sí, borrar", cancelText: "Cancelar",
+            options: new DialogOptions { CloseButton = true });
+
+        if (confirm == true)
+        {
+            var ok = await Api.DeleteAsync(item.id_usuario);
+            if (ok)
+            {
+                Snackbar.Add("Usuario eliminado", Severity.Success);
+                await CargarAsync();
+            }
+            else
+            {
+                Snackbar.Add("No se pudo eliminar", Severity.Error);
+            }
+        }
+    }
 }
