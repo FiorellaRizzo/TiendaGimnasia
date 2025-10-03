@@ -1,0 +1,248 @@
+﻿@page "/productos"
+@using MudBlazor
+@using TiendaGimnasia.Shared
+@using TiendaGimnasia.Shared.DTOs
+@using TiendaGimnasia.UI.Models            @* <-- CategoriaDTO está acá *@
+@using TiendaGimnasia.UI.Pages.Dialogs
+@inject ProductosAPI Api
+@inject CategoriasAPI CatsApi                
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Productos</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+
+    <!-- Header -->
+    <MudPaper Class="pa-4 mb-4">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.h5">Productos</MudText>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CrearAsync">
+                Nuevo producto
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Table -->
+    <MudPaper Class="pa-4">
+        @if (_cargando)
+        {
+            <div class="d-flex justify-center pa-6">
+                <MudProgressCircular Indeterminate="true" />
+                <MudText Class="ml-3">Cargando...</MudText>
+            </div>
+        }
+        else
+        {
+            <MudTable Items="_items" Hover="true" Dense="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh style="width:72px;">Img</MudTh>
+                    <MudTh>Nombre</MudTh>
+                    <MudTh>Categoría</MudTh>
+                    <MudTh style="width:140px;">Precio</MudTh>
+                    <MudTh style="width:100px;">Stock</MudTh>
+                    <MudTh style="width:210px;">Acciones</MudTh>
+                </HeaderContent>
+
+                <RowTemplate>
+                    <MudTd DataLabel="Img">
+                        @if (!string.IsNullOrWhiteSpace(context.imagen_url))
+                        {
+                            <img src="@context.imagen_url"
+                                 style="width:36px;height:36px;border-radius:50%;object-fit:cover" />
+                        }
+                    </MudTd>
+
+                    <MudTd DataLabel="Nombre">@context.nombre</MudTd>
+                    <MudTd DataLabel="Categoría">@context.categoria_nombre</MudTd>
+                    <MudTd DataLabel="Precio">@context.precio.ToString("C")</MudTd>
+                    <MudTd DataLabel="Stock">@context.stock</MudTd>
+
+                    <MudTd>
+                        <MudButton Size="Size.Small"
+                                   Variant="Variant.Outlined"
+                                   OnClick="@(()=>EditarAsync(context))">
+                            Editar
+                        </MudButton>
+
+                        <MudButton Size="Size.Small"
+                                   Color="Color.Error"
+                                   Variant="Variant.Text"
+                                   Class="ml-2"
+                                   OnClick="@(()=>EliminarAsync(context))">
+                            Borrar
+                        </MudButton>
+                    </MudTd>
+                </RowTemplate>
+
+                <NoRecordsContent>
+                    <MudText>No hay productos cargados.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        }
+    </MudPaper>
+
+</MudContainer>
+
+@code {
+    private bool _cargando;
+    private List<ProductoDTO> _items = new();
+
+    // <-- NUEVO: cache local de categorías para el diálogo
+    private List<CategoriaDTO> _categorias = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        try
+        {
+            _cargando = true;
+
+            // Cargar categorías y productos (puede ser en paralelo si querés)
+            _categorias = await CatsApi.GetAllAsync();
+            _items      = await Api.GetAllAsync();
+        }
+        catch
+        {
+            Snackbar.Add("No se pudieron obtener los productos", Severity.Error);
+        }
+        finally
+        {
+            _cargando = false;
+            StateHasChanged();
+        }
+    }
+
+    // Crear
+    private async Task CrearAsync()
+    {
+        MudBlazor.IDialogReference dialogRef = default!;
+
+        var nuevo = new ProductoDTO();
+
+        dialogRef = await Dialog.ShowAsync<ProductoEditDialog>(
+            "Nuevo producto",
+            new DialogParameters
+            {
+                { nameof(ProductoEditDialog.Model), nuevo },
+                { nameof(ProductoEditDialog.Categorias), _categorias },    // <-- PASO LA LISTA
+                { nameof(ProductoEditDialog.OnSave),
+                  EventCallback.Factory.Create<ProductoDTO>(this, async dto =>
+                  {
+                      dialogRef.Close(DialogResult.Ok(dto));
+
+                      var create = new ProductoCreateDTO
+                      {
+                          nombre = dto.nombre,
+                          descripcion = dto.descripcion,
+                          precio = dto.precio,
+                          stock = dto.stock,
+                          imagen_url = dto.imagen_url,
+                          id_categoria = dto.id_categoria
+                      };
+
+                      var created = await Api.CreateAsync(create);
+                      if (created is not null)
+                      {
+                          Snackbar.Add("Producto creado", Severity.Success);
+                          await CargarAsync();
+                      }
+                      else Snackbar.Add("No se pudo crear el producto", Severity.Error);
+                  })
+                },
+                { nameof(ProductoEditDialog.OnCancel),
+                  EventCallback.Factory.Create(this, () => dialogRef.Close(DialogResult.Cancel()))
+                }
+            },
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true });
+
+        await dialogRef.Result;
+    }
+
+    // Editar
+    private async Task EditarAsync(ProductoDTO item)
+    {
+        var editable = new ProductoDTO
+        {
+            id_producto = item.id_producto,
+            nombre = item.nombre,
+            descripcion = item.descripcion,
+            precio = item.precio,
+            stock = item.stock,
+            imagen_url = item.imagen_url,
+            id_categoria = item.id_categoria,
+            categoria_nombre = item.categoria_nombre
+        };
+
+        MudBlazor.IDialogReference dialogRef = default!;
+
+        dialogRef = await Dialog.ShowAsync<ProductoEditDialog>(
+            "Editar producto",
+            new DialogParameters
+            {
+                { nameof(ProductoEditDialog.Model), editable },
+                { nameof(ProductoEditDialog.Categorias), _categorias },    // <-- PASO LA LISTA
+                { nameof(ProductoEditDialog.OnSave),
+                  EventCallback.Factory.Create<ProductoDTO>(this, async dto =>
+                  {
+                      dialogRef.Close(DialogResult.Ok(dto));
+
+                      var update = new ProductoUpdateDTO
+                      {
+                          id_producto = dto.id_producto,
+                          nombre = dto.nombre,
+                          descripcion = dto.descripcion,
+                          precio = dto.precio,
+                          stock = dto.stock,
+                          imagen_url = dto.imagen_url,
+                          id_categoria = dto.id_categoria
+                      };
+
+                      var ok = await Api.UpdateAsync(update.id_producto, update);
+                      if (ok)
+                      {
+                          Snackbar.Add("Producto actualizado", Severity.Success);
+                          await CargarAsync();
+                      }
+                      else Snackbar.Add("No se pudo actualizar el producto", Severity.Error);
+                  })
+                },
+                { nameof(ProductoEditDialog.OnCancel),
+                  EventCallback.Factory.Create(this, () => dialogRef.Close(DialogResult.Cancel()))
+                }
+            },
+            new DialogOptions { CloseButton = true, FullWidth = true, MaxWidth = MaxWidth.Medium, CloseOnEscapeKey = true });
+
+        await dialogRef.Result;
+    }
+
+    // Borrar
+    private async Task EliminarAsync(ProductoDTO item)
+    {
+        bool? confirm = await Dialog.ShowMessageBox(
+            "Confirmar borrado",
+            (MarkupString)$"¿Eliminar el producto <b>{item.nombre}</b>?",
+            yesText: "Sí, borrar",
+            cancelText: "Cancelar",
+            options: new DialogOptions { CloseButton = true });
+
+        if (confirm == true)
+        {
+            var ok = await Api.DeleteAsync(item.id_producto);
+            if (ok)
+            {
+                Snackbar.Add("Producto eliminado", Severity.Success);
+                await CargarAsync();
+            }
+            else
+            {
+                Snackbar.Add("No se pudo eliminar el producto", Severity.Error);
+            }
+        }
+    }
+}
+

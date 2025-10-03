@@ -27,6 +27,8 @@ builder.Services.AddHttpClient("ApiClient", client =>
 // Servicio de categorías
 builder.Services.AddScoped<CategoriasAPI>();
 
+// Servicio de productos (UI)
+builder.Services.AddScoped<ProductosAPI>();
 
 
 builder.Services.AddSingleton<WeatherForecastService>();

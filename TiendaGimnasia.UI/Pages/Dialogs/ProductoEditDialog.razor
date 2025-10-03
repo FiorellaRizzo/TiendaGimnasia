@@ -1,0 +1,135 @@
+﻿@using MudBlazor
+@using Microsoft.AspNetCore.Components
+@using TiendaGimnasia.Shared.DTOs
+@using TiendaGimnasia.UI.Models   @* donde está CategoriaDTO que envías desde Productos.razor *@
+
+<MudDialog Title="@Title">
+    <DialogContent>
+        <MudForm @ref="_form" Class="mt-2">
+            <MudGrid>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField Value="_edit.id_producto.ToString()" Label="Id" Disabled="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_edit.nombre" Label="Nombre" Required="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_edit.descripcion" Label="Descripción" Lines="3" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal"
+                                     @bind-Value="_edit.precio"
+                                     Label="Precio"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                     Required="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int"
+                                     @bind-Value="_edit.stock"
+                                     Label="Stock" />
+                </MudItem>
+
+                <MudItem xs="12" sm="8">
+                    <MudTextField @bind-Value="_edit.imagen_url" Label="URL imagen" />
+                </MudItem>
+
+                <MudItem xs="12" sm="4" Class="d-flex align-center">
+                    @if (!string.IsNullOrWhiteSpace(_edit.imagen_url))
+                    {
+                        <MudAvatar Size="Size.Large" Image="_edit.imagen_url" />
+                    }
+                </MudItem>
+
+                <!-- CATEGORÍA (int no-nullable + placeholder con 0) -->
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int"
+                               @bind-Value="_edit.id_categoria"
+                               Label="Categoría*"
+                               Required="true"
+                               RequiredError="Seleccioná una categoría"
+                               Dense="true"
+                               FullWidth="true"
+                               Disabled="@(Categorias is null || !Categorias.Any())">
+
+                        <MudSelectItem T="int" Value="0">-- Seleccionar --</MudSelectItem>
+
+                        @if (Categorias is not null)
+                        {
+                            @foreach (var c in Categorias.OrderBy(x => x.nombre))
+                            {
+                                <MudSelectItem T="int" Value="@c.id_categoria">
+                                    @c.nombre (#@c.id_categoria)
+                                </MudSelectItem>
+                            }
+                        }
+                    </MudSelect>
+
+                    @if (Categorias is null || !Categorias.Any())
+                    {
+                        <MudText Color="Color.Warning" Typo="Typo.caption">
+                            No hay categorías cargadas. Creá una desde “Categorías”.
+                        </MudText>
+                    }
+                </MudItem>
+
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancelar">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Guardar">Guardar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Editar producto";
+    [Parameter] public ProductoDTO Model { get; set; } = new();
+
+    // Pasado desde Productos.razor
+    [Parameter] public IEnumerable<CategoriaDTO>? Categorias { get; set; }
+
+    [Parameter] public EventCallback<ProductoDTO> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private MudForm? _form;
+    private ProductoDTO _edit = new();
+
+    protected override void OnParametersSet()
+    {
+        // Copia defensiva 1:1 (id_categoria es int, no se usa null)
+        _edit = new ProductoDTO
+        {
+            id_producto = Model.id_producto,
+            nombre = Model.nombre,
+            descripcion = Model.descripcion,
+            precio = Model.precio,
+            stock = Model.stock,
+            imagen_url = Model.imagen_url,
+            id_categoria = Model.id_categoria > 0 ? Model.id_categoria : 0, // placeholder 0
+            categoria_nombre = Model.categoria_nombre
+        };
+    }
+
+    private async Task Guardar()
+    {
+        if (_form is not null)
+        {
+            await _form.Validate();
+            if (!_form.IsValid) return;
+        }
+
+        // Validación extra por si el Required no alcanza
+        if (_edit.id_categoria <= 0) return;
+
+        await OnSave.InvokeAsync(_edit);
+    }
+
+    private Task Cancelar() => OnCancel.InvokeAsync();
+}
